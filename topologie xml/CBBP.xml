@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<experiment boot="kollaps:2.0">
+    <services>
+        <!-- Dashboard pour le monitoring -->
+        <service name="dashboard" image="kollaps/dashboard:1.0" supervisor="true" port="8088"/>
+
+        <!-- Un serveur -->
+        <service name="server"    image="kollaps/iperf3-network:1.0" command="['server']"/>
+
+        <!-- Plusieurs clients générant la charge -->
+        <service name="client1"   image="kollaps/iperf3-network:1.0" command="['client','server']"/>
+        <service name="client2"   image="kollaps/iperf3-network:1.0" command="['client','server']"/>
+        <service name="client3"   image="kollaps/iperf3-network:1.0" command="['client','server']"/>
+    </services>
+
+    <bridges>
+        <bridge name="br0"/>
+    </bridges>
+
+    <links>
+        <!-- Liens clients ↔ bridge -->
+        <link origin="client1" dest="br0" latency="5"  upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+        <link origin="client2" dest="br0" latency="5"  upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+        <link origin="client3" dest="br0" latency="5"  upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+        <!-- Lien serveur ↔ bridge -->
+        <link origin="server"  dest="br0" latency="5"  upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+    </links>
+
+    <dynamic>
+        <!-- 0 s : tous les services rejoignent -->
+        <schedule name="server"   time="0.0" action="join"/>
+        <schedule name="client1"  time="0.0" action="join"/>
+        <schedule name="client2"  time="0.0" action="join"/>
+        <schedule name="client3"  time="0.0" action="join"/>
+
+        <!-- 30 s : brutal drop de bande passante à 10 Mbps -->
+        <schedule origin="client1" dest="br0" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="br0"     dest="client1" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="client2" dest="br0" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="br0"     dest="client2" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="client3" dest="br0" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="br0"     dest="client3" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="server"  dest="br0" time="30.0" upload="10Mbps"  download="10Mbps"/>
+        <schedule origin="br0"     dest="server"  time="30.0" upload="10Mbps"  download="10Mbps"/>
+
+        <!-- 90 s : rétablissement de la bande passante initiale -->
+        <schedule origin="client1" dest="br0" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="br0"     dest="client1" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="client2" dest="br0" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="br0"     dest="client2" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="client3" dest="br0" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="br0"     dest="client3" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="server"  dest="br0" time="90.0" upload="1Gbps"  download="1Gbps"/>
+        <schedule origin="br0"     dest="server"  time="90.0" upload="1Gbps"  download="1Gbps"/>
+
+        <!-- 120 s : fin de l’expérience -->
+        <schedule time="120.0" action="quit"/>
+    </dynamic>
+</experiment>

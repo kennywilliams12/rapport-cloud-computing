@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<experiment boot="kollaps:2.0">
+    <services>
+        <!-- Dashboard pour le monitoring -->
+        <service name="dashboard" image="kollaps/dashboard:1.0" supervisor="true" port="8088"/>
+
+        <!-- Deux serveurs en active-active -->
+        <service name="server1" image="kollaps/iperf3-network:1.0" command="['server']"/>
+        <service name="server2" image="kollaps/iperf3-network:1.0" command="['server']"/>
+
+        <!-- Plusieurs clients générant la charge -->
+        <service name="client1" image="kollaps/iperf3-network:1.0" command="['client','server1']"/>
+        <service name="client2" image="kollaps/iperf3-network:1.0" command="['client','server1']"/>
+        <service name="client3" image="kollaps/iperf3-network:1.0" command="['client','server2']"/>
+    </services>
+
+    <bridges>
+        <bridge name="br0"/>
+    </bridges>
+
+    <links>
+        <!-- Liens clients ↔ bridge -->
+        <link origin="client1" dest="br0" latency="5" upload="500Mbps" download="500Mbps" network="kollaps_network"/>
+        <link origin="client2" dest="br0" latency="5" upload="500Mbps" download="500Mbps" network="kollaps_network"/>
+        <link origin="client3" dest="br0" latency="5" upload="500Mbps" download="500Mbps" network="kollaps_network"/>
+
+        <!-- Liens serveurs ↔ bridge -->
+        <link origin="server1" dest="br0" latency="5" upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+        <link origin="server2" dest="br0" latency="5" upload="1Gbps" download="1Gbps" network="kollaps_network"/>
+    </links>
+
+    <dynamic>
+        <!-- 0 s : tous les serveurs et clients rejoignent -->
+        <schedule name="server1" time="0.0" action="join"/>
+        <schedule name="server2" time="0.0" action="join"/>
+        <schedule name="client1" time="0.0" action="join"/>
+        <schedule name="client2" time="0.0" action="join"/>
+        <schedule name="client3" time="0.0" action="join"/>
+
+        <!-- 60 s : partition – on coupe tous les liens serveurs→bridge -->
+        <schedule origin="server1" time="60.0"   dest="br0" drop="1.0"/>
+        <schedule origin="br0"     time="60.0"   dest="server1" drop="1.0"/>
+        <schedule origin="server2" time="60.0"   dest="br0" drop="1.0"/>
+        <schedule origin="br0"     time="60.0"   dest="server2" drop="1.0"/>
+
+        <!-- 120 s : rétablissement de la connexion -->
+        <schedule origin="server1" time="120.0" dest="br0" drop="0.0"/>
+        <schedule origin="br0"     time="120.0" dest="server1" drop="0.0"/>
+        <schedule origin="server2" time="120.0" dest="br0" drop="0.0"/>
+        <schedule origin="br0"     time="120.0" dest="server2" drop="0.0"/>
+
+        <!-- 180 s : fin de l’expérience -->
+        <schedule time="180.0" action="quit"/>
+    </dynamic>
+</experiment>
