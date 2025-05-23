@@ -1,161 +1,143 @@
-# rapport-cloud-computing
-Rapport de projet Cloud Computing avec Kollaps
 
 
-## 1. Correction du script de lancement
 
-Au départ, le conteneur ne lançait que le fichier `app.py` au lieu de `Dashboard.py`.
-J’ai donc modifié le `Dockerfile` correspondant :
+# 🚀 Projet Cloud Computing avec Kollaps
+Déploiement d’une simulation réseau avec **Kollaps** et **Docker Swarm**, incluant Dashboard et outils de génération de topologie.
+
+## 🧰 Prérequis – Installation de Docker
+
+➡️ À faire sur la **machine hôte (VM Ubuntu 22.04)** :
+
+```bash
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# ✅ Vérification Docker
+sudo docker run hello-world
+````
+
+## 📥 Clonage du dépôt Kollaps
+
+➡️ Depuis le **dossier de travail de votre choix** :
+
+```bash
+git clone --recurse-submodules https://github.com/miguelammatos/Kollaps.git
+cd Kollaps
+```
+
+## 📝 Avant de builder : corriger un Dockerfile
+
+➡️ Modifier le fichier `dockerfiles/Dashboard` :
+
+🔧 **Objectif** : s'assurer que c’est bien `Dashboard.py` qui est lancé, pas `app.py`.
 
 ```dockerfile
-# Use official Python runtime as the base image
-FROM python:3.9
+# Base officielle Python 3.9
+FROM python:3.9-slim
 
-# Set the working directory inside the container
+# Répertoire de travail dans le conteneur
 WORKDIR /app
 
-# Copy application code into the container
+# Copie du code source dans le conteneur
 COPY . /app
 
-# Install necessary Python dependencies
-RUN pip install flask
+# Installation des dépendances Python
+RUN pip install --no-cache-dir flask
 
-# Expose le port utilisé par Flask
+# Exposition du port utilisé par Flask (8088)
 EXPOSE 8088
 
-# Command to run the application inside the container
+# Commande de lancement de l’application
+# Remplace "app.py" par "Dashboard.py" (correction importante)
 CMD ["python", "Dashboard.py"]
 ```
 
----
+##  Construction des images Docker
 
-## 2. Script de nettoyage complet
-
-Pour repartir d’une base Docker propre, exécute depuis ta **machine hôte** (pas dans un conteneur) :
+➡️ Dans le **dossier racine du dépôt `Kollaps/`** :
 
 ```bash
-echo "➡️ Suppression des stacks Swarm"
-docker stack rm iperf3network || true
-
-echo "➡️ Suppression des services restants"
-docker service rm $(docker service ls -q) 2>/dev/null || true
-
-echo "➡️ Suppression des conteneurs"
-docker container rm -f $(docker ps -aq) 2>/dev/null || true
-
-echo "➡️ Suppression des images"
-docker image rm -f $(docker images -q) 2>/dev/null || true
-
-echo "➡️ Suppression des volumes"
-docker volume rm $(docker volume ls -q) 2>/dev/null || true
-
-echo "➡️ Suppression des réseaux custom"
-docker network rm $(docker network ls --filter "driver=overlay" -q) 2>/dev/null || true
-docker network rm kollaps_network 2>/dev/null || true
-
-echo "✅ Docker est propre."
-```
-
-### Vérification de l’état global
-
-```bash
-echo "📦 Stacks Docker Swarm :"
-docker stack ls
-
-echo -e "\n🐳 Conteneurs en cours :"
-docker ps -a
-
-echo -e "\n🧊 Images Docker :"
-docker images
-
-echo -e "\n🧠 Réseaux Docker :"
-docker network ls
-
-echo -e "\n💾 Volumes Docker :"
-docker volume ls
-
-echo -e "\n🛠️ Services Swarm :"
-docker service ls
-```
-
----
-
-## 3. Reconstruction des images
-
-Toujours depuis la **machine hôte**, dans le dossier `~/Kollaps` :
-
-```bash
-cd ~/Kollaps
 export DOCKER_BUILDKIT=1
 
-# 1. Build de l’image principale
+# Build de l’image principale
 docker build -f dockerfiles/Kollaps -t kollaps:2.0 .
 
-# 2. Build de l’outil de génération de déploiement
+# Build de l’outil de génération
 docker build -f dockerfiles/DeploymentGenerator -t kollaps-deployment-generator:2.0 .
 
-# 3. Build de la Dashboard
+# Build de la Dashboard (corrigée)
 docker build -f dockerfiles/Dashboard -t kollaps/dashboard:1.0 .
 ```
 
 ---
 
-## 4. Génération de la topologie Kollaps
+## 📐 Génération de topologie
 
-1. Place-toi dans le dossier des exemples :
+➡️ Se rendre dans le dossier `Kollaps/examples/` :
 
-   ```bash
-   cd ~/Kollaps/examples
-   ```
-2. Rends l’outil exécutable :
+```bash
+cd examples
+chmod +x KollapsAppBuilder
 
-   ```bash
-   chmod +x KollapsAppBuilder
-   ```
-3. Génère le scénario `iperf3network` :
+# 🔧 Crée le dossier iperf3network/
+./KollapsAppBuilder iperf3network
+```
 
-   ```bash
-   ./KollapsAppBuilder iperf3network
-   ```
+📝 Le fichier `topology.xml` est généré dans `Kollaps/examples/iperf3network/`.
 
-   → Un dossier `iperf3network/` apparaît, contenant notamment `topology.xml`.
-4. Produit le fichier `topology.yaml` :
+```bash
+# Convertit XML en YAML pour Docker Swarm
+./KollapsDeploymentGenerator iperf3network/topology.xml -s topology.yaml
+```
 
-   ```bash
-   ./KollapsDeploymentGenerator iperf3network/topology.xml -s topology.yaml
-   ```
-5. Crée le réseau overlay :
+✅ Fichier de sortie : `topology.yaml` dans `Kollaps/examples/`
 
-   ```bash
-   docker network create --driver overlay --subnet 11.1.0.0/20 --attachable kollaps_network
-   ```
+## 🌐 Création du réseau Docker overlay
 
----
+➡️ Depuis n’importe où :
 
-## 5. Déploiement de la stack
+```bash
+docker network create --driver overlay --subnet 11.1.0.0/20 --attachable kollaps_network
+```
+
+## 📤 Déploiement de la stack
+
+➡️ Dans `Kollaps/examples/` où se trouve `topology.yaml` :
 
 ```bash
 docker stack deploy -c topology.yaml iperf3network
 ```
 
-> **En cas d’erreur réseau/Swarm**, exécute :
->
-> ```bash
-> docker network rm ingress || true
-> docker swarm leave --force
-> docker swarm init
-> docker network create --driver overlay --subnet 11.1.0.0/20 --attachable kollaps_network
-> cd ~/Kollaps/examples
-> docker stack deploy -c topology.yaml iperf3network
-> ```
+## 🔧 En cas d’erreur de Swarm (réseau, ingress, etc.)
 
-Le nom `iperf3network` est simplement le nom logique de la stack.
+➡️ À exécuter si le déploiement échoue :
+
+```bash
+docker network rm ingress || true
+docker swarm leave --force
+docker swarm init
+
+docker network create --driver overlay --subnet 11.1.0.0/20 --attachable kollaps_network
+
+cd ~/Kollaps/examples
+docker stack deploy -c topology.yaml iperf3network
+```
 
 ---
 
-## 6. Publication du port 8088
+## 🌍 Accès au Dashboard (port 8088)
 
-Pour être certain que le Dashboard soit accessible depuis l’hôte, ajoute dans **tous** tes fichiers YAML de service :
+📝 Avant de déployer, dans **topology.yaml**, assure-toi que la section du service `dashboard` contient bien :
 
 ```yaml
 ports:
@@ -165,15 +147,22 @@ ports:
     mode: host
 ```
 
-Puis redéploie la stack.
-
----
-
-## 7. Test avec un navigateur minimal
-
-J’ai installé **links** et testé :
+➡️ Puis redéploie la stack :
 
 ```bash
-links http://localhost:8088
+docker stack deploy -c topology.yaml iperf3network
+```
+
+✅ Le Dashboard est maintenant disponible sur :
+📍 `http://localhost:8088`
+
+
+## ✅ Vérification de l’état du déploiement
+
+```bash
+docker stack ls
+docker service ls
+docker ps -a
+docker network ls
 ```
 
