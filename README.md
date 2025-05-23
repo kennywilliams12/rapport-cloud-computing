@@ -4,6 +4,47 @@
 # 🚀 Projet Cloud Computing avec Kollaps
 Déploiement d’une simulation réseau avec **Kollaps** et **Docker Swarm**, incluant Dashboard et outils de génération de topologie.
 
+Voici une description concise des fichiers présents dans le dépôt GitHub [kennywilliams12/rapport-cloud-computing](https://github.com/kennywilliams12/rapport-cloud-computing/tree/main) :
+
+---
+
+### 📄 Fichiers principaux
+
+* **`README.md`**
+  Guide détaillé pour l'installation, la construction et le déploiement d'une simulation réseau avec Kollaps et Docker Swarm.
+
+* **`Cloud Computing Project step by step report.docx`**
+  Rapport de projet décrivant étape par étape le processus de mise en place de l'environnement de simulation.
+
+---
+
+### 📁 Scripts de collecte de métriques
+
+* **`collect_metrics.sh`**
+  Script pour collecter des métriques réseau (débit, latence, pertes) entre les clients et serveurs définis dans la stack Docker Swarm.
+
+* **`schedule_metrics.sh`**
+  Script orchestrateur qui exécute `collect_metrics.sh` à intervalles réguliers pendant une durée spécifiée, consolidant les résultats en un fichier CSV unique.
+
+---
+
+### 🗂️ Fichiers de topologie et visualisation
+
+* **`topologie.xml`**
+  Fichier XML décrivant la topologie réseau utilisée pour générer le fichier `topology.yaml` nécessaire au déploiement avec Docker Swarm.
+
+* **`yaml2graph.py`**
+  Script Python qui génère une représentation graphique de la topologie réseau à partir du fichier `topology.yaml`, en utilisant Graphviz.
+
+* **`topologies image`**
+  Dossier contenant les images générées par `yaml2graph.py`, représentant visuellement les différentes topologies réseau.
+
+---
+
+Ce dépôt fournit l'ensemble des outils nécessaires pour simuler des scénarios réseau complexes avec Kollaps, collecter des métriques pertinentes et visualiser les topologies mises en place.
+
+
+
 ## 🧰 Prérequis – Installation de Docker
 
 ➡️ À faire sur la **machine hôte (VM Ubuntu 22.04)** :
