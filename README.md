@@ -41,8 +41,6 @@ Voici une description concise des fichiers présents dans le dépôt GitHub [ken
 
 ---
 
-Ce dépôt fournit l'ensemble des outils nécessaires pour simuler des scénarios réseau complexes avec Kollaps, collecter des métriques pertinentes et visualiser les topologies mises en place.
-
 
 
 ## 🧰 Prérequis – Installation de Docker
